@@ -72,7 +72,7 @@ namespace DynamicBackground
             
             if (Uri.IsWellFormedUriString(Filepath.Text, UriKind.RelativeOrAbsolute))
             {
-                //string folder = @"C:\Users\skoley\Pictures\Saved Pictures\";
+                //string folder = @"C:\Users\Pictures\Saved Pictures\";
                 //string filename = DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss") + ".png";
                 try
                 {
