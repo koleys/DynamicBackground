@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 
@@ -22,8 +24,22 @@ namespace DynamicBackground
         private void DynamicBackgroundUI_Load(object sender, EventArgs e)
         {
             Style.DataSource = Enum.GetValues(typeof(WallpaperStyle));
+            checkBox1.Checked = true;
         }
-
+        private void DynamicBackgroundUI_Resize(object sender, EventArgs e)
+        {
+            //if the form is minimized  
+            //hide it from the task bar  
+            //and show the system tray icon (represented by the NotifyIcon control)  
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                Hide();
+                string apppath = System.IO.Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+                notifyIcon.Icon= new Icon(apppath + "\\Icons\\TrayIcon.ico");
+                notifyIcon.Visible = true;
+            }
+        }
+        
         private void Filepath_TextChanged(object sender, EventArgs e)
         {
             //if (string.IsNullOrEmpty(Filepath.Text))
@@ -98,7 +114,11 @@ namespace DynamicBackground
 
         private void setBingImage_Click(object sender, EventArgs e)
         {
-            
+            SetBingBackground();
+        }
+
+        private void SetBingBackground()
+        {
             try
             {
                 string savedFilePath = bingobj.GetDownloadedImagePath();
@@ -133,6 +153,35 @@ namespace DynamicBackground
                 folderPath = folderBrowserDialog.SelectedPath;
             }
             return folderPath;
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if(checkBox1.Checked)
+            {
+                if(interval.Value<=0)
+                {
+                    interval.Value = 30;
+                }
+                timer1.Interval = Convert.ToInt32(interval.Value) * 60000;
+                timer1.Start();
+            }
+            else
+            {
+                timer1.Stop();
+                timer1.Dispose();
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            SetBingBackground();
+        }        
+        private void notifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Show();
+            this.WindowState = FormWindowState.Normal;
+            notifyIcon.Visible = false;
         }
     }
 }
