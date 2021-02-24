@@ -44,7 +44,7 @@ namespace DynamicBackground
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.interval = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btnSetInterval = new System.Windows.Forms.Button();
             this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.interval)).BeginInit();
             this.SuspendLayout();
@@ -164,7 +164,7 @@ namespace DynamicBackground
             this.interval.Size = new System.Drawing.Size(55, 20);
             this.interval.TabIndex = 9;
             this.interval.Value = new decimal(new int[] {
-            30,
+            180,
             0,
             0,
             0});
@@ -178,14 +178,15 @@ namespace DynamicBackground
             this.label3.TabIndex = 10;
             this.label3.Text = "Interval in mins";
             // 
-            // button1
+            // btnSetInterval
             // 
-            this.button1.Location = new System.Drawing.Point(313, 12);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(85, 23);
-            this.button1.TabIndex = 11;
-            this.button1.Text = "Set Interval";
-            this.button1.UseVisualStyleBackColor = true;
+            this.btnSetInterval.Location = new System.Drawing.Point(313, 12);
+            this.btnSetInterval.Name = "btnSetInterval";
+            this.btnSetInterval.Size = new System.Drawing.Size(85, 23);
+            this.btnSetInterval.TabIndex = 11;
+            this.btnSetInterval.Text = "Set Interval";
+            this.btnSetInterval.UseVisualStyleBackColor = true;
+            this.btnSetInterval.Click += new System.EventHandler(this.btnSetInterval_Click);
             // 
             // notifyIcon
             // 
@@ -197,7 +198,7 @@ namespace DynamicBackground
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(498, 104);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.btnSetInterval);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.interval);
             this.Controls.Add(this.checkBox1);
@@ -236,7 +237,7 @@ namespace DynamicBackground
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.NumericUpDown interval;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button btnSetInterval;
         private System.Windows.Forms.NotifyIcon notifyIcon;
     }
 }

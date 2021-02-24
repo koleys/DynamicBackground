@@ -14,6 +14,8 @@ namespace DynamicBackground
         public DynamicBackgroundUI()
         {
             InitializeComponent();
+            this.WindowState = FormWindowState.Minimized;
+            this.ShowInTaskbar = false;
         }
 
         private void Browse_Click(object sender, EventArgs e)
@@ -159,11 +161,8 @@ namespace DynamicBackground
         {
             if(checkBox1.Checked)
             {
-                if(interval.Value<=0)
-                {
-                    interval.Value = 30;
-                }
-                timer1.Interval = Convert.ToInt32(interval.Value) * 60000;
+                int interval_val = Convert.ToInt32(bingobj.GetSetting("Interval"));
+                timer1.Interval = Convert.ToInt32(interval_val) * 60000;
                 timer1.Start();
             }
             else
@@ -182,6 +181,15 @@ namespace DynamicBackground
             Show();
             this.WindowState = FormWindowState.Normal;
             notifyIcon.Visible = false;
+        }
+
+        private void btnSetInterval_Click(object sender, EventArgs e)
+        {
+            if (interval.Value <= 0)
+            {
+                interval.Value = 30;
+            }
+            bingobj.SetSetting("Interval", interval.Value.ToString());
         }
     }
 }

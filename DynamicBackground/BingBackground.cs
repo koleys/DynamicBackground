@@ -129,7 +129,7 @@ namespace DynamicBackground
             background.Save(imagepath, System.Drawing.Imaging.ImageFormat.Bmp);
             return imagepath;
         }
-        private  string GetSetting(string key)
+        public  string GetSetting(string key)
         {
             return ConfigurationManager.AppSettings[key];
         }
