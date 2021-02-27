@@ -161,6 +161,7 @@ namespace DynamicBackground
         {
             if(checkBox1.Checked)
             {
+                SetBingBackground();
                 int interval_val = Convert.ToInt32(bingobj.GetSetting("Interval"));
                 timer1.Interval = Convert.ToInt32(interval_val) * 60000;
                 timer1.Start();
