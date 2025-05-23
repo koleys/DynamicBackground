@@ -16,96 +16,128 @@
 
     public static class Wallpaper
     {
-        private const string DESKTOP_REG_PATH = @"Control Panel\Desktop";
-        private const int HISTORY_MAX_ENTRIES = 5;
-        private const string HISTORY_REG_PATH = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers";
-        private const int SPI_SETDESKWALLPAPER = 20;
-        private const int SPIF_SENDWININICHANGE = 0x02;
-        private const int SPIF_UPDATEINIFILE = 0x01;
-        private const string TILE_WALLPAPER_REG_PATH = "TileWallpaper";
-        private const string WALLPAPER_STYLE_REG_PATH = "WallpaperStyle";
+        private const string DesktopRegistryPath = @"Control Panel\Desktop";
+        private const int HistoryMaxEntries = 5;
+        private const string HistoryRegistryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers";
+        private const int SpiSetDeskWallpaper = 20;
+        private const int SpifSendWinIniChange = 0x02;
+        private const int SpifUpdateIniFile = 0x01;
+        private const string TileWallpaperRegistryKey = "TileWallpaper";
+        private const string WallpaperStyleRegistryKey = "WallpaperStyle";
         private static State? _backupState;
-
         private static bool _historyRestored;
 
-        /// <summary>
-        /// Backups the current wallpaper state (style and history).
-        /// </summary>
         public static void BackupState()
         {
-            var history = new string[HISTORY_MAX_ENTRIES];
-
-            using (var key = Registry.CurrentUser.OpenSubKey(HISTORY_REG_PATH, true))
+            try
             {
-                for (var i = 0; i < history.Length; i++)
-                    history[i] = (string)key.GetValue($"BackgroundHistoryPath{i}");
+                var history = new string[HistoryMaxEntries];
+                using (var key = Registry.CurrentUser.OpenSubKey(HistoryRegistryPath, true))
+                {
+                    for (var i = 0; i < history.Length; i++)
+                        history[i] = (string)key.GetValue($"BackgroundHistoryPath{i}");
+                }
+                _backupState = new State
+                {
+                    Config = GetWallpaperConfig(),
+                    History = history,
+                    Wallpaper = history[0],
+                };
+                _historyRestored = false;
             }
-
-            _backupState = new State
+            catch (Exception ex)
             {
-                Config = GetWallpaperConfig(),
-                History = history,
-                Wallpaper = history[0],
-            };
-
-            _historyRestored = false;
+                Logger.LogError("Failed to backup wallpaper state.", ex);
+                throw;
+            }
         }
 
-        /// <summary>
-        /// Restores the state (style, wallpaper and history) before any Set() method.
-        /// </summary>
         public static void RestoreState()
         {
-            if (!_backupState.HasValue)
-                throw new Exception("You must call BackupState() before.");
-
-            SetWallpaperConfig(_backupState.Value.Config);
-            ChangeWallpaper(_backupState.Value.Wallpaper);
-            RestoreHistory();
-
-            _backupState = null;
+            try
+            {
+                if (!_backupState.HasValue)
+                    throw new Exception("You must call BackupState() before.");
+                SetWallpaperConfig(_backupState.Value.Config);
+                ChangeWallpaper(_backupState.Value.Wallpaper);
+                RestoreHistory();
+                _backupState = null;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to restore wallpaper state.", ex);
+                throw;
+            }
         }
 
-        /// <summary>
-        /// Sets the wallpaper without changing its style.
-        /// </summary>
-        public static void Set(string filename)
+        public static void Set(string filePath)
         {
-            BackupState();
-            ChangeWallpaper(filename);
+            try
+            {
+                BackupState();
+                ChangeWallpaper(filePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to set wallpaper: {filePath}", ex);
+                throw;
+            }
         }
 
-        /// <summary>
-        /// Sets the wallpaper with the given style.
-        /// </summary>
-        public static void Set(string filename, WallpaperStyle style)
+        public static void Set(string filePath, WallpaperStyle style)
         {
-            BackupState();
-            SetStyle(style);
-            ChangeWallpaper(filename);
+            try
+            {
+                BackupState();
+                SetStyle(style);
+                ChangeWallpaper(filePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to set wallpaper with style: {filePath}, {style}", ex);
+                throw;
+            }
         }
 
-        /// <summary>
-        /// Sets the wallpaper without changing its style nor the history in Windows settings.
-        /// </summary>
-        public static void SilentSet(string filename)
+        public static void SilentSet(string filePath)
         {
-            Set(filename);
-            RestoreHistory();
+            try
+            {
+                Set(filePath);
+                RestoreHistory();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to silent set wallpaper: {filePath}", ex);
+                throw;
+            }
         }
 
-        /// <summary>
-        /// Sets the wallpaper with the given style without changing the history in Windows settings.
-        /// </summary>
-        public static void SilentSet(string filename, WallpaperStyle style)
+        public static void SilentSet(string filePath, WallpaperStyle style)
         {
-            Set(filename, style);
-            RestoreHistory();
+            try
+            {
+                Set(filePath, style);
+                RestoreHistory();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to silent set wallpaper with style: {filePath}, {style}", ex);
+                throw;
+            }
         }
 
-        private static void ChangeWallpaper(string filename)
+        private static void ChangeWallpaper(string filePath)
         {
-            SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, filename, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+            try
+            {
+                SystemParametersInfo(SpiSetDeskWallpaper, 0, filePath, SpifUpdateIniFile | SpifSendWinIniChange);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to change wallpaper: {filePath}", ex);
+                throw;
+            }
         }
 
         private static int GetRegistryValue(RegistryKey key, string name, int defaultValue)
@@ -120,32 +152,37 @@
 
         private static Config GetWallpaperConfig()
         {
-            RegistryKey key = Registry.CurrentUser.OpenSubKey(DESKTOP_REG_PATH, true);
-
-            return new Config
+            using (var key = Registry.CurrentUser.OpenSubKey(DesktopRegistryPath, true))
             {
-                Style = GetRegistryValue(key, WALLPAPER_STYLE_REG_PATH, 0),
-                IsTile = GetRegistryValue(key, TILE_WALLPAPER_REG_PATH, false),
-            };
+                return new Config
+                {
+                    Style = GetRegistryValue(key, WallpaperStyleRegistryKey, 0),
+                    IsTile = GetRegistryValue(key, TileWallpaperRegistryKey, false),
+                };
+            }
         }
 
         private static void RestoreHistory()
         {
-            if (_historyRestored) return;
-
-            if (!_backupState.HasValue)
-                throw new Exception("You must call BackupState() before.");
-
-            var backupState = _backupState.Value;
-
-            using (var key = Registry.CurrentUser.OpenSubKey(HISTORY_REG_PATH, true))
+            try
             {
-                for (var i = 0; i < HISTORY_MAX_ENTRIES; i++)
-                    if (backupState.History[i] != null)
-                        key.SetValue($"BackgroundHistoryPath{i}", backupState.History[i], RegistryValueKind.String);
+                if (_historyRestored) return;
+                if (!_backupState.HasValue)
+                    throw new Exception("You must call BackupState() before.");
+                var backupState = _backupState.Value;
+                using (var key = Registry.CurrentUser.OpenSubKey(HistoryRegistryPath, true))
+                {
+                    for (var i = 0; i < HistoryMaxEntries; i++)
+                        if (backupState.History[i] != null)
+                            key.SetValue($"BackgroundHistoryPath{i}", backupState.History[i], RegistryValueKind.String);
+                }
+                _historyRestored = true;
             }
-
-            _historyRestored = true;
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to restore wallpaper history.", ex);
+                throw;
+            }
         }
 
         private static void SetRegistryValue(RegistryKey key, string name, int value)
@@ -165,41 +202,38 @@
                 case WallpaperStyle.Fill:
                     SetWallpaperConfig(new Config { Style = 10, IsTile = false });
                     break;
-
                 case WallpaperStyle.Fit:
                     SetWallpaperConfig(new Config { Style = 6, IsTile = false });
                     break;
-
                 case WallpaperStyle.Stretch:
                     SetWallpaperConfig(new Config { Style = 2, IsTile = false });
                     break;
-
                 case WallpaperStyle.Tile:
                     SetWallpaperConfig(new Config { Style = 0, IsTile = true });
                     break;
-
                 case WallpaperStyle.Center:
                     SetWallpaperConfig(new Config { Style = 0, IsTile = false });
                     break;
-
-                case WallpaperStyle.Span: // Windows 8 or newer only
+                case WallpaperStyle.Span:
                     SetWallpaperConfig(new Config { Style = 22, IsTile = false });
                     break;
-
                 default:
                     throw new ArgumentOutOfRangeException(nameof(style));
             }
         }
 
-        private static void SetWallpaperConfig(Config value)
+        private static void SetWallpaperConfig(Config config)
         {
-            RegistryKey key = Registry.CurrentUser.OpenSubKey(DESKTOP_REG_PATH, true);
-            SetRegistryValue(key, WALLPAPER_STYLE_REG_PATH, value.Style);
-            SetRegistryValue(key, TILE_WALLPAPER_REG_PATH, value.IsTile);
+            using (var key = Registry.CurrentUser.OpenSubKey(DesktopRegistryPath, true))
+            {
+                SetRegistryValue(key, WallpaperStyleRegistryKey, config.Style);
+                SetRegistryValue(key, TileWallpaperRegistryKey, config.IsTile);
+            }
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+
         private struct Config
         {
             public bool IsTile;
