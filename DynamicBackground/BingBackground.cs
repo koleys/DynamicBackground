@@ -17,7 +17,7 @@ namespace DynamicBackground
         private static readonly Dictionary<string, string> DefaultSettings = new()
         {
             { "ImgSaveLoc", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Bing Backgrounds", DateTime.Now.Year.ToString()) },
-            { "Interval", "30" }
+            { "Interval", "720" }
         };
 
         public BingBackground()

@@ -154,19 +154,19 @@ namespace DynamicBackground
             // interval
             // 
             interval.Increment = new decimal(new int[] { 30, 0, 0, 0 });
-            interval.Location = new Point(312, 22);
+            interval.Location = new Point(295, 22);
             interval.Margin = new Padding(4, 3, 4, 3);
-            interval.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
+            interval.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             interval.Minimum = new decimal(new int[] { 30, 0, 0, 0 });
             interval.Name = "interval";
-            interval.Size = new Size(44, 23);
+            interval.Size = new Size(61, 23);
             interval.TabIndex = 9;
-            interval.Value = new decimal(new int[] { 180, 0, 0, 0 });
+            interval.Value = new decimal(new int[] { 720, 0, 0, 0 });
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(138, 24);
+            label3.Location = new Point(121, 24);
             label3.Margin = new Padding(4, 0, 4, 0);
             label3.Name = "label3";
             label3.Size = new Size(166, 15);
