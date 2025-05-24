@@ -1,43 +1,77 @@
 ﻿using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
-using System.Configuration;
 using System.Drawing;
 using System.IO;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace DynamicBackground
 {
-    //https://github.com/josueespinosa/BingBackground/blob/master/BingBackground/BingBackground/App.config
     public class BingBackground
     {
+        private dynamic _jsonCache;
+        private static readonly string SettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DynamicBackground.settings.json");
+        private static readonly Dictionary<string, string> DefaultSettings = new()
+        {
+            { "ImgSaveLoc", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Bing Backgrounds", DateTime.Now.Year.ToString()) },
+            { "Interval", "720" }
+        };
+
+        public BingBackground()
+        {
+            EnsureSettingsFile();
+        }
+
+        private void EnsureSettingsFile()
+        {
+            try
+            {
+                if (!File.Exists(SettingsFilePath))
+                {
+                    File.WriteAllText(SettingsFilePath, JsonConvert.SerializeObject(DefaultSettings, Formatting.Indented));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to create initial settings file.", ex);
+                // Do not throw, allow app to continue
+            }
+        }
+
         public string GetDownloadedImagePath()
         {
-            string urlBase = GetBackgroundUrlBase();
-            Image background = DownloadBackground(urlBase + GetResolutionExtension(urlBase));
-            return SaveBackground(background);
-            //SetBackground(GetPosition());
+            try
+            {
+                string urlBase = GetBackgroundUrlBase();
+                Image backgroundImage = DownloadBackground(urlBase + GetResolutionExtension(urlBase));
+                return SaveBackground(backgroundImage);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to get Bing downloaded image path.", ex);
+                throw;
+            }
         }
 
         private dynamic DownloadJson()
         {
-            using (WebClient webClient = new WebClient())
+            if (_jsonCache != null) return _jsonCache;
+            using (var webClient = new WebClient())
             {
-                Console.WriteLine("Downloading JSON...");
                 try
                 {
                     string jsonString = webClient.DownloadString("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US");
-                    return JsonConvert.DeserializeObject<dynamic>(jsonString);
+                    _jsonCache = JsonConvert.DeserializeObject<dynamic>(jsonString);
+                    return _jsonCache;
                 }
                 catch (Exception ex)
                 {
-
-                    throw ex;
+                    Logger.LogError("Failed to download Bing JSON.", ex);
+                    throw new Exception("Failed to download Bing JSON.", ex);
                 }
-                
             }
         }
 
@@ -51,183 +85,142 @@ namespace DynamicBackground
         {
             dynamic jsonObject = DownloadJson();
             string copyrightText = jsonObject.images[0].copyright;
-            return copyrightText.Substring(0, copyrightText.IndexOf(" ("));
+            int idx = copyrightText.IndexOf(" (");
+            return idx > 0 ? copyrightText.Substring(0, idx) : copyrightText;
         }
 
         private bool WebsiteExists(string url)
         {
             try
             {
-                WebRequest request = WebRequest.Create(url);
+                var request = WebRequest.Create(url);
                 request.Method = "HEAD";
-                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                return response.StatusCode == HttpStatusCode.OK;
+                using (var response = (HttpWebResponse)request.GetResponse())
+                {
+                    return response.StatusCode == HttpStatusCode.OK;
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.LogError($"Website check failed for {url}", ex);
                 return false;
             }
         }
 
         private string GetResolutionExtension(string url)
         {
-            Rectangle resolution = Screen.PrimaryScreen.Bounds;
-            string widthByHeight = resolution.Width + "x" + resolution.Height;
-            string potentialExtension = "_" + widthByHeight + ".jpg";
+            var resolution = Screen.PrimaryScreen.Bounds;
+            string widthByHeight = $"{resolution.Width}x{resolution.Height}";
+            string potentialExtension = $"_{widthByHeight}.jpg";
             if (WebsiteExists(url + potentialExtension))
             {
-                Console.WriteLine("Background for " + widthByHeight + " found.");
                 return potentialExtension;
             }
-            else
-            {
-                Console.WriteLine("No background for " + widthByHeight + " was found.");
-                Console.WriteLine("Using 1920x1080 instead.");
-                return "_1920x1080.jpg";
-            }
-        }        
+            return "_1920x1080.jpg";
+        }
 
         private Image DownloadBackground(string url)
         {
-            Console.WriteLine("Downloading background...");
-            //SetProxy();
-            WebRequest request = WebRequest.Create(url);
-            WebResponse reponse = request.GetResponse();
-            Stream stream = reponse.GetResponseStream();
-            return Image.FromStream(stream);
+            try
+            {
+                var request = WebRequest.Create(url);
+                using (var response = request.GetResponse())
+                using (var stream = response.GetResponseStream())
+                {
+                    return Image.FromStream(stream);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to download background from {url}", ex);
+                throw;
+            }
         }
 
         public string GetBackgroundImagePath()
         {
-            string directoryPath;
-            directoryPath = GetSetting("ImgSaveLoc");
-            if(string.IsNullOrEmpty(directoryPath))
+            try
             {
-                directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Bing Backgrounds", DateTime.Now.Year.ToString());
-            }            
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath); 
+                string directoryPath = GetSetting("ImgSaveLoc");
+                if (string.IsNullOrEmpty(directoryPath))
+                {
+                    directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Bing Backgrounds", DateTime.Now.Year.ToString());
+                }
+                if (!Directory.Exists(directoryPath))
+                {
+                    Directory.CreateDirectory(directoryPath);
+                }
+                string fileName = GetBackgroundTitle();
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    fileName = DateTime.Now.ToString("M-d-yyyy");
+                }
+                else
+                {
+                    fileName = Regex.Replace(fileName, @"[^0-9a-zA-Z]+", "_");
+                }
+                fileName += ".jpg";
+                return Path.Combine(directoryPath, fileName);
             }
-            string filename = GetBackgroundTitle();
-            if(string.IsNullOrEmpty(filename))
+            catch (Exception ex)
             {
-                filename = DateTime.Now.ToString("M-d-yyyy") ;
+                Logger.LogError("Failed to get Bing background image path.", ex);
+                throw;
             }
-            else
+        }
+
+        private string SaveBackground(Image backgroundImage)
+        {
+            try
             {
-               filename= Regex.Replace(filename, @"[^0-9a-zA-Z]+", "_");
+                string imagePath = GetBackgroundImagePath();
+                backgroundImage.Save(imagePath, System.Drawing.Imaging.ImageFormat.Bmp);
+                return imagePath;
             }
-            filename += ".jpg";
-            return Path.Combine(directoryPath, filename);
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to save Bing background image.", ex);
+                throw;
+            }
         }
 
-        private string SaveBackground(Image background)
+        public string GetSetting(string key)
         {
-            Console.WriteLine("Saving background...");
-            string imagepath = GetBackgroundImagePath();
-            background.Save(imagepath, System.Drawing.Imaging.ImageFormat.Bmp);
-            return imagepath;
+            try
+            {
+                if (!File.Exists(SettingsFilePath))
+                    return null;
+                var json = File.ReadAllText(SettingsFilePath);
+                var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                if (dict != null && dict.TryGetValue(key, out var value))
+                    return value;
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to get setting: {key}", ex);
+                throw;
+            }
         }
-        public  string GetSetting(string key)
+
+        public void SetSetting(string key, string value)
         {
-            return ConfigurationManager.AppSettings[key];
+            try
+            {
+                Dictionary<string, string> dict = new();
+                if (File.Exists(SettingsFilePath))
+                {
+                    var json = File.ReadAllText(SettingsFilePath);
+                    dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                }
+                dict[key] = value;
+                File.WriteAllText(SettingsFilePath, JsonConvert.SerializeObject(dict, Formatting.Indented));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to set setting: {key}", ex);
+                throw;
+            }
         }
-
-        public  void SetSetting(string key, string value)
-        {
-            Configuration configuration = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-            configuration.AppSettings.Settings[key].Value = value;
-            configuration.Save(ConfigurationSaveMode.Full, true);
-            ConfigurationManager.RefreshSection("appSettings");
-        }
-        #region commented
-        //private static void SetProxy()
-        //{
-        //    string proxyUrl = Properties.Settings.Default.Proxy;
-        //    if (proxyUrl.Length > 0)
-        //    {
-        //        var webProxy = new WebProxy(proxyUrl, true);
-        //        webProxy.Credentials = CredentialCache.DefaultCredentials;
-        //        WebRequest.DefaultWebProxy = webProxy;
-        //    }
-        //}
-
-        //private enum PicturePosition
-        //{
-        //    Tile,
-        //    Center,
-        //    Stretch,
-        //    Fit,
-        //    Fill
-        //}
-
-        //private static PicturePosition GetPosition()
-        //{
-        //    PicturePosition position = PicturePosition.Fit;
-        //    switch (Properties.Settings.Default.Position)
-        //    {
-        //        case "Tile":
-        //            position = PicturePosition.Tile;
-        //            break;
-        //        case "Center":
-        //            position = PicturePosition.Center;
-        //            break;
-        //        case "Stretch":
-        //            position = PicturePosition.Stretch;
-        //            break;
-        //        case "Fit":
-        //            position = PicturePosition.Fit;
-        //            break;
-        //        case "Fill":
-        //            position = PicturePosition.Fill;
-        //            break;
-        //    }
-        //    return position;
-        //}
-
-        //internal sealed class NativeMethods
-        //{
-        //    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        //    internal static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-        //}
-
-        //private static void SetBackground(PicturePosition style)
-        //{
-        //    Console.WriteLine("Setting background...");
-        //    using (RegistryKey key = Registry.CurrentUser.OpenSubKey(Path.Combine("Control Panel", "Desktop"), true))
-        //    {
-        //        switch (style)
-        //        {
-        //            case PicturePosition.Tile:
-        //                key.SetValue("PicturePosition", "0");
-        //                key.SetValue("TileWallpaper", "1");
-        //                break;
-        //            case PicturePosition.Center:
-        //                key.SetValue("PicturePosition", "0");
-        //                key.SetValue("TileWallpaper", "0");
-        //                break;
-        //            case PicturePosition.Stretch:
-        //                key.SetValue("PicturePosition", "2");
-        //                key.SetValue("TileWallpaper", "0");
-        //                break;
-        //            case PicturePosition.Fit:
-        //                key.SetValue("PicturePosition", "6");
-        //                key.SetValue("TileWallpaper", "0");
-        //                break;
-        //            case PicturePosition.Fill:
-        //                key.SetValue("PicturePosition", "10");
-        //                key.SetValue("TileWallpaper", "0");
-        //                break;
-        //        }
-        //    }
-        //    const int SetDesktopBackground = 20;
-        //    const int UpdateIniFile = 1;
-        //    const int SendWindowsIniChange = 2;
-        //    NativeMethods.SystemParametersInfo(SetDesktopBackground, 0, GetBackgroundImagePath(), UpdateIniFile | SendWindowsIniChange);
-        //} 
-        #endregion
-
     }
-
 }

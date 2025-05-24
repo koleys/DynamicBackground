@@ -26,7 +26,8 @@ namespace DynamicBackground
         private void DynamicBackgroundUI_Load(object sender, EventArgs e)
         {
             Style.DataSource = Enum.GetValues(typeof(WallpaperStyle));
-            checkBox1.Checked = true;
+            checkBox1.Checked = true; // Ensure auto change from Bing is checked by default
+            Set.Enabled = !string.IsNullOrWhiteSpace(Filepath.Text); // Set button state on load
         }
         private void DynamicBackgroundUI_Resize(object sender, EventArgs e)
         {
@@ -44,26 +45,20 @@ namespace DynamicBackground
         
         private void Filepath_TextChanged(object sender, EventArgs e)
         {
-            //if (string.IsNullOrEmpty(Filepath.Text))
-            //{
-            //    Set.Enabled = false;
-            //}
-            //else
-            //{
-            //    Set.Enabled = true;
-            //}
+            Set.Enabled = !string.IsNullOrWhiteSpace(Filepath.Text);
         }
 
         private string GetFileName()
         {
             ImageCodecInfo[] codecs = ImageCodecInfo.GetImageEncoders();
             string sep = string.Empty;
-
+            openFileDialog1.Filter = @"All Files (*.*)|*.*";
             foreach (var c in codecs)
             {
                 string codecName = c.CodecName.Substring(8).Replace("Codec", "Files").Trim();
-                openFileDialog1.Filter = String.Format("{0}{1}{2} ({3})|{3}", openFileDialog1.Filter, sep, codecName, c.FilenameExtension);
                 sep = "|";
+                openFileDialog1.Filter = String.Format("{0}{1}{2} ({3})|{3}", openFileDialog1.Filter, sep, codecName, c.FilenameExtension);
+                
             }
             openFileDialog1.Filter = String.Format("{0}{1}{2} ({3})|{3}", openFileDialog1.Filter, sep, "All Files", "*.*");
 
