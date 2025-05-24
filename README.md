@@ -57,3 +57,12 @@ DynamicBackground is a Windows application (now targeting .NET 8 LTS) that autom
 
 ## Support
 For issues or feature requests, please contact the project maintainer or submit an issue on the project repository.
+
+## Testing & Code Coverage
+
+### Running Tests
+- The project uses MSTest for unit testing. To run all tests:dotnet test- Tests cover all major code paths, including error handling and file operations.
+
+### Code Coverage
+- The test suite is designed for 100% code coverage of all public and critical private logic.
+- To check code coverage, use a tool like [coverlet](https://github.com/coverlet-coverage/coverlet):dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov- Review the generated coverage report to verify all code paths are tested.
