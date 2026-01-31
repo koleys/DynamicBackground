@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 using DynamicBackground.Services.Abstractions;
+using DynamicBackground.ViewModels;
 
 namespace DynamicBackground
 {
@@ -12,10 +13,7 @@ namespace DynamicBackground
         private Picture _picture;
         private BingBackground bingobj;
         private readonly IServiceProvider _serviceProvider;
-        private IBackgroundService _backgroundService;
-        private IWallpaperService _wallpaperService;
-        private ISettingsService _settingsService;
-        private IImageDownloader _imageDownloader;
+        private MainWindowViewModel? _viewModel;
 
         public DynamicBackgroundUI(IServiceProvider serviceProvider = null)
         {
@@ -27,11 +25,19 @@ namespace DynamicBackground
             _serviceProvider = serviceProvider;
             if (_serviceProvider != null)
             {
-                // Initialize from DI
-                _backgroundService = _serviceProvider.GetService(typeof(IBackgroundService)) as IBackgroundService;
-                _wallpaperService = _serviceProvider.GetService(typeof(IWallpaperService)) as IWallpaperService;
-                _settingsService = _serviceProvider.GetService(typeof(ISettingsService)) as ISettingsService;
-                _imageDownloader = _serviceProvider.GetService(typeof(IImageDownloader)) as IImageDownloader;
+                // Initialize ViewModel from DI
+                var backgroundService = _serviceProvider.GetService(typeof(IBackgroundService)) as IBackgroundService;
+                var wallpaperService = _serviceProvider.GetService(typeof(IWallpaperService)) as IWallpaperService;
+                var settingsService = _serviceProvider.GetService(typeof(ISettingsService)) as ISettingsService;
+                var imageDownloader = _serviceProvider.GetService(typeof(IImageDownloader)) as IImageDownloader;
+                var logger = _serviceProvider.GetService(typeof(ILogger)) as ILogger;
+
+                if (backgroundService != null && wallpaperService != null && 
+                    settingsService != null && imageDownloader != null && logger != null)
+                {
+                    _viewModel = new MainWindowViewModel(backgroundService, wallpaperService, 
+                        settingsService, imageDownloader, logger);
+                }
             }
 
             // Fallback to legacy initialization for backward compatibility
@@ -41,7 +47,14 @@ namespace DynamicBackground
 
         private void Browse_Click(object sender, EventArgs e)
         {
-            Filepath.Text = GetFileName();
+            if (_viewModel != null)
+            {
+                Filepath.Text = _viewModel.BrowseFile();
+            }
+            else
+            {
+                Filepath.Text = GetFileName();
+            }
         }
 
         private void DynamicBackgroundUI_Load(object sender, EventArgs e)
@@ -94,17 +107,70 @@ namespace DynamicBackground
 
         private void Set_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(Filepath.Text))
+            if (_viewModel != null)
             {
-                MessageBox.Show("please select a file");
-                return;
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                _viewModel.SetWallpaperAsync(Filepath.Text);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                if (!string.IsNullOrEmpty(_viewModel.LastError))
+                {
+                    MessageBox.Show(_viewModel.LastError, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
-            
-            if (Uri.IsWellFormedUriString(Filepath.Text, UriKind.RelativeOrAbsolute))
+            else
+            {
+                if (string.IsNullOrEmpty(Filepath.Text))
+                {
+                    MessageBox.Show("please select a file");
+                    return;
+                }
+                
+                if (Uri.IsWellFormedUriString(Filepath.Text, UriKind.RelativeOrAbsolute))
+                {
+                    try
+                    {
+                        string savedFilePath = _picture.DownloadImage(Filepath.Text);
+                        if (!string.IsNullOrEmpty(savedFilePath))
+                        {
+                            WallpaperStyle _style = (WallpaperStyle)Style.SelectedItem;
+                            Wallpaper.SilentSet(savedFilePath, _style);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message);
+                    }
+                }
+                else
+                {
+                    WallpaperStyle _style = (WallpaperStyle)Style.SelectedItem;
+                    Wallpaper.SilentSet(Filepath.Text, _style);
+                }
+            }
+        }
+
+        private void setBingImage_Click(object sender, EventArgs e)
+        {
+            SetBingBackground();
+        }
+
+        private void SetBingBackground()
+        {
+            if (_viewModel != null)
+            {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                _viewModel.DownloadAndSetBingWallpaperAsync();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                if (!string.IsNullOrEmpty(_viewModel.LastError))
+                {
+                    MessageBox.Show(_viewModel.LastError, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
             {
                 try
                 {
-                    string savedFilePath = _picture.DownloadImage(Filepath.Text);
+                    string savedFilePath = bingobj.GetDownloadedImagePath();
                     if (!string.IsNullOrEmpty(savedFilePath))
                     {
                         WallpaperStyle _style = (WallpaperStyle)Style.SelectedItem;
@@ -116,41 +182,27 @@ namespace DynamicBackground
                     MessageBox.Show(ex.Message);
                 }
             }
-            else
-            {
-                WallpaperStyle _style = (WallpaperStyle)Style.SelectedItem;
-                Wallpaper.SilentSet(Filepath.Text, _style);
-            }
-        }
-
-        private void setBingImage_Click(object sender, EventArgs e)
-        {
-            SetBingBackground();
-        }
-
-        private void SetBingBackground()
-        {
-            try
-            {
-                string savedFilePath = bingobj.GetDownloadedImagePath();
-                if (!string.IsNullOrEmpty(savedFilePath))
-                {
-                    WallpaperStyle _style = (WallpaperStyle)Style.SelectedItem;
-                    Wallpaper.SilentSet(savedFilePath, _style);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
         }
 
         private void downloadLoc_Click(object sender, EventArgs e)
         {
-            string folderpath = Browsefolder();
-            if(!string.IsNullOrEmpty(folderpath))               
+            string folderpath;
+            
+            if (_viewModel != null)
             {
-                bingobj.SetSetting("ImgSaveLoc", folderpath);
+                folderpath = _viewModel.BrowseFolder();
+                if (!string.IsNullOrEmpty(folderpath))
+                {
+                    _viewModel.SetImageSaveLocation(folderpath);
+                }
+            }
+            else
+            {
+                folderpath = Browsefolder();
+                if(!string.IsNullOrEmpty(folderpath))               
+                {
+                    bingobj.SetSetting("ImgSaveLoc", folderpath);
+                }
             }
         }
 
@@ -199,7 +251,15 @@ namespace DynamicBackground
             {
                 interval.Value = 30;
             }
-            bingobj.SetSetting("Interval", interval.Value.ToString());
+            
+            if (_viewModel != null)
+            {
+                _viewModel.SetUpdateInterval((int)interval.Value);
+            }
+            else
+            {
+                bingobj.SetSetting("Interval", interval.Value.ToString());
+            }
         }
     }
 }
