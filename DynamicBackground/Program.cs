@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using DynamicBackground.Infrastructure;
 
 namespace DynamicBackground
 {
@@ -14,9 +12,22 @@ namespace DynamicBackground
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new DynamicBackgroundUI());
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+
+                // Initialize DI container
+                var serviceProvider = AppBootstrapper.CreateServiceProvider();
+
+                // Run application with DI
+                Application.Run(new DynamicBackgroundUI(serviceProvider));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Application initialization failed: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
