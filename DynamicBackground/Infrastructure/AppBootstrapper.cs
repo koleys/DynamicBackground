@@ -3,6 +3,7 @@ using DynamicBackground.Services;
 using DynamicBackground.Services.Abstractions;
 using DynamicBackground.Services.Logging;
 using DynamicBackground.Platform.Windows;
+using DynamicBackground.ViewModels;
 
 namespace DynamicBackground.Infrastructure
 {
@@ -15,17 +16,17 @@ namespace DynamicBackground.Infrastructure
         {
             var services = new ServiceCollection();
 
-            // Get settings file path
+            // Get settings file path using AppConstants
             var settingsFilePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "DynamicBackground",
-                "DynamicBackground.settings.json");
+                AppConstants.APP_FOLDER_NAME,
+                AppConstants.SETTINGS_FILE_NAME);
 
             // Register logging service
             var logFilePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "DynamicBackground",
-                "logs.txt");
+                AppConstants.APP_FOLDER_NAME,
+                AppConstants.LOG_FILE_NAME);
             services.AddSingleton<ILogger>(new DualModeLogger(logFilePath));
 
             // Register core services
@@ -35,6 +36,12 @@ namespace DynamicBackground.Infrastructure
 
             // Register platform-specific services
             services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
+
+            // Register ViewModel
+            services.AddSingleton<MainWindowViewModel>();
+
+            // Register AppController
+            services.AddSingleton<AppController>();
 
             return services.BuildServiceProvider();
         }

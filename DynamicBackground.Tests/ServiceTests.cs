@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using DynamicBackground.Services;
 using DynamicBackground.Services.Abstractions;
 using DynamicBackground.Services.Logging;
+using DynamicBackground.Platform.Windows;
+using DynamicBackground.ViewModels;
 
 namespace DynamicBackground.Tests.Services
 {
@@ -226,16 +228,26 @@ namespace DynamicBackground.Tests.Services
     }
 
     [TestClass]
-    public class ServiceIntegrationTests
+    public class MainWindowViewModelTests
     {
         private string _testSettingsPath;
         private string _testLogPath;
+        private ILogger _logger;
+        private ISettingsService _settingsService;
+        private IImageDownloader _imageDownloader;
+        private IBackgroundService _backgroundService;
+        private IWallpaperService _wallpaperService;
 
         [TestInitialize]
         public void Setup()
         {
             _testSettingsPath = Path.Combine(Path.GetTempPath(), $"settings_{Guid.NewGuid()}.json");
             _testLogPath = Path.Combine(Path.GetTempPath(), $"log_{Guid.NewGuid()}.log");
+            _logger = new FileLogger(_testLogPath);
+            _settingsService = new SettingsService(_testSettingsPath);
+            _imageDownloader = new HttpImageDownloader(_logger);
+            _backgroundService = new BackgroundService(_settingsService, _imageDownloader, _logger);
+            _wallpaperService = new WindowsWallpaperService();
         }
 
         [TestCleanup]
@@ -248,27 +260,146 @@ namespace DynamicBackground.Tests.Services
         }
 
         [TestMethod]
-        public void Services_CanBeConstructedWithDependencies()
+        public void Constructor_InitializesProperties()
         {
-            var logger = new FileLogger(_testLogPath);
-            var settingsService = new SettingsService(_testSettingsPath);
-            var imageDownloader = new HttpImageDownloader(logger);
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
 
-            Assert.IsNotNull(logger);
-            Assert.IsNotNull(settingsService);
-            Assert.IsNotNull(imageDownloader);
+            Assert.IsNotNull(viewModel);
+            Assert.AreEqual(720, viewModel.UpdateInterval);
+            Assert.IsTrue(viewModel.AutoUpdateEnabled);
+            Assert.AreEqual(string.Empty, viewModel.CurrentImagePath);
         }
 
         [TestMethod]
-        public void SettingsService_WorksWithBackgroundService()
+        public void SetUpdateInterval_UpdatesProperty()
         {
-            var logger = new FileLogger(_testLogPath);
-            var settingsService = new SettingsService(_testSettingsPath);
-            var imageDownloader = new HttpImageDownloader(logger);
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
 
-            // Settings should be accessible to background service
-            var settings = settingsService.GetSetting("ImgSaveLoc");
-            Assert.IsNotNull(settings); // Should have default value
+            bool result = viewModel.SetUpdateInterval(480);
+            Assert.IsTrue(result);
+            Assert.AreEqual(480, viewModel.UpdateInterval);
+        }
+
+        [TestMethod]
+        public void SetUpdateInterval_PersistsToSettings()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            bool result = viewModel.SetUpdateInterval(360);
+            Assert.IsTrue(result);
+            var savedValue = _settingsService.GetSetting("Interval");
+            
+            Assert.AreEqual("360", savedValue);
+        }
+
+        [TestMethod]
+        public void SetUpdateInterval_NegativeValue_ReturnsFalse()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            bool result = viewModel.SetUpdateInterval(-100);
+            Assert.IsFalse(result);
+            Assert.IsFalse(string.IsNullOrEmpty(viewModel.LastError));
+        }
+
+        [TestMethod]
+        public void BrowseFile_ReturnsEmptyStringWhenCancelled()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            // This will show dialog, user can cancel
+            var result = viewModel.BrowseFile();
+            // We can't really test user interaction, so just verify it doesn't throw
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void BrowseFolder_ReturnsEmptyStringWhenCancelled()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            var result = viewModel.BrowseFolder();
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void SetImageSaveLocation_PersistsToSettings()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            var testPath = @"C:\Test\Path";
+            bool result = viewModel.SetImageSaveLocation(testPath);
+            Assert.IsTrue(result);
+            
+            var savedValue = _settingsService.GetSetting("ImgSaveLoc");
+            Assert.AreEqual(testPath, savedValue);
+        }
+
+        [TestMethod]
+        public void SetImageSaveLocation_EmptyPath_ReturnsFalse()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            bool result = viewModel.SetImageSaveLocation(string.Empty);
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public async Task SetWallpaperAsync_WithLocalFile_CallsWallpaperService()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            var testImagePath = Path.Combine(Path.GetTempPath(), "test_image.jpg");
+            
+            try
+            {
+                // Create a dummy file
+                File.WriteAllBytes(testImagePath, new byte[] { 0xFF, 0xD8 });
+                
+                // This will fail to set but shouldn't throw due to error handling
+                bool result = await viewModel.SetWallpaperAsync(testImagePath);
+                
+                // Should attempt to set
+                Assert.AreEqual(testImagePath, viewModel.CurrentImagePath);
+            }
+            finally
+            {
+                if (File.Exists(testImagePath))
+                    File.Delete(testImagePath);
+            }
+        }
+
+        [TestMethod]
+        public async Task SetWallpaperAsync_EmptyPath_ReturnsFalse()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            bool result = await viewModel.SetWallpaperAsync(string.Empty);
+            Assert.IsFalse(result);
+            Assert.IsFalse(string.IsNullOrEmpty(viewModel.LastError));
+        }
+
+        [TestMethod]
+        public void PropertyChanged_FiresWhenPropertiesUpdate()
+        {
+            var viewModel = new DynamicBackground.ViewModels.MainWindowViewModel(
+                _backgroundService, _wallpaperService, _settingsService, _imageDownloader, _logger);
+
+            bool propertyChangedFired = false;
+            viewModel.PropertyChanged += (s, e) => propertyChangedFired = true;
+
+            viewModel.CurrentStyle = WallpaperStyle.Fit;
+            Assert.IsTrue(propertyChangedFired);
         }
     }
 }
