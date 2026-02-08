@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dotnet test:*)",
       "Bash(dotnet build)",
-      "Bash(dotnet run --configuration Release)"
+      "Bash(dotnet run --configuration Release)",
+      "Bash(dir:*)",
+      "Bash(git add:*)"
     ]
   }
 }
