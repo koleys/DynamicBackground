@@ -19,6 +19,11 @@ namespace DynamicBackground.Services.Abstractions
         void SilentSet(string filePath, WallpaperStyle style);
 
         /// <summary>
+        /// Sets the wallpaper silently without updating history.
+        /// </summary>
+        Task SilentSetAsync(string filePath, WallpaperStyle style, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Restores the wallpaper to previous state.
         /// </summary>
         void RestoreState();

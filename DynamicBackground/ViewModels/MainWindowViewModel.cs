@@ -142,12 +142,12 @@ namespace DynamicBackground.ViewModels
                 // Check if URL or local file
                 if (Uri.IsWellFormedUriString(filePath, UriKind.RelativeOrAbsolute))
                 {
-                    var savedPath = await _imageDownloader.DownloadAndSaveImageAsync(filePath, 
+                    var savedPath = await _imageDownloader.DownloadAndSaveImageAsync(filePath,
                         Path.Combine(Path.GetTempPath(), Path.GetFileName(filePath)), cancellationToken);
-                    
+
                     if (!string.IsNullOrEmpty(savedPath))
                     {
-                        _wallpaperService.SilentSet(savedPath, CurrentStyle);
+                        await _wallpaperService.SilentSetAsync(savedPath, CurrentStyle, cancellationToken);
                         CurrentImagePath = savedPath;
                         return true;
                     }
@@ -156,7 +156,7 @@ namespace DynamicBackground.ViewModels
                 else
                 {
                     // Local file
-                    _wallpaperService.SilentSet(filePath, CurrentStyle);
+                    await _wallpaperService.SilentSetAsync(filePath, CurrentStyle, cancellationToken);
                     CurrentImagePath = filePath;
                     return true;
                 }
@@ -186,7 +186,7 @@ namespace DynamicBackground.ViewModels
                 var imagePath = await _backgroundService.GetDownloadedImagePathAsync(cancellationToken);
                 if (!string.IsNullOrEmpty(imagePath))
                 {
-                    _wallpaperService.SilentSet(imagePath, CurrentStyle);
+                    await _wallpaperService.SilentSetAsync(imagePath, CurrentStyle, cancellationToken);
                     CurrentImagePath = imagePath;
                     return true;
                 }
