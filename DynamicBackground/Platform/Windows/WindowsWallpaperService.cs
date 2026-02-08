@@ -1,116 +1,92 @@
 using System;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using System.Threading.Tasks;
 using DynamicBackground.Services.Abstractions;
-using Microsoft.Win32;
 
 namespace DynamicBackground.Platform.Windows
 {
     /// <summary>
-    /// Windows-specific wallpaper service using Registry and P/Invoke.
+    /// Windows-specific wallpaper service that delegates to WindowsWallpaperProvider.
+    /// Maintains backward compatibility with IWallpaperService interface.
     /// </summary>
     public class WindowsWallpaperService : IWallpaperService
     {
-        private const uint SPI_SETDESKWALLPAPER = 20;
-        private const uint SPIF_UPDATEINIFILE = 0x01;
-        private const uint SPIF_SENDCHANGE = 0x02;
-        private string? _backupImagePath;
-        private WallpaperStyle _backupStyle;
+        private readonly IWallpaperProvider _provider;
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int SystemParametersInfo(
-            uint uAction, uint uParam, string lpvParam, uint fsWinIni);
+        /// <summary>
+        /// Initializes a new instance of the WindowsWallpaperService.
+        /// </summary>
+        public WindowsWallpaperService()
+        {
+            _provider = new WindowsWallpaperProvider();
+        }
 
+        /// <summary>
+        /// Sets the wallpaper with the specified style.
+        /// Synchronous wrapper around the async provider.
+        /// </summary>
         public void Set(string filePath, WallpaperStyle style)
         {
             try
             {
-                BackupState();
-                ApplyWallpaper(filePath, style);
+                var task = _provider.SetWallpaperAsync(filePath, style);
+                task.GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error setting wallpaper: {ex}");
+                Logger.LogError($"Error setting wallpaper: {filePath}", ex);
                 throw;
             }
         }
 
+        /// <summary>
+        /// Sets the wallpaper silently without updating history.
+        /// Synchronous wrapper around the async provider.
+        /// </summary>
         public void SilentSet(string filePath, WallpaperStyle style)
         {
             try
             {
-                ApplyWallpaper(filePath, style);
+                var task = _provider.SetWallpaperAsync(filePath, style);
+                task.GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error silently setting wallpaper: {ex}");
+                Logger.LogError($"Error silently setting wallpaper: {filePath}", ex);
                 throw;
             }
         }
 
+        /// <summary>
+        /// Sets the wallpaper silently without updating history.
+        /// Asynchronous wrapper around the async provider.
+        /// </summary>
+        public async Task SilentSetAsync(string filePath, WallpaperStyle style, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await _provider.SetWallpaperAsync(filePath, style, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error silently setting wallpaper: {filePath}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Restores the wallpaper to previous state (not implemented in provider).
+        /// </summary>
         public void RestoreState()
         {
-            try
-            {
-                if (!string.IsNullOrEmpty(_backupImagePath) && File.Exists(_backupImagePath))
-                {
-                    ApplyWallpaper(_backupImagePath, _backupStyle);
-                    _backupImagePath = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error restoring wallpaper: {ex}");
-            }
+            Logger.LogWarning("RestoreState is deprecated. Use Wallpaper.RestoreState() for backward compatibility.");
         }
 
+        /// <summary>
+        /// Backs up current wallpaper state (not implemented in provider).
+        /// </summary>
         public void BackupState()
         {
-            try
-            {
-                using (var key = Registry.CurrentUser.OpenSubKey(
-                    @"Control Panel\Desktop", false))
-                {
-                    if (key != null)
-                    {
-                        _backupImagePath = key.GetValue("Wallpaper")?.ToString();
-                        var styleValue = key.GetValue("WallpaperStyle")?.ToString() ?? "0";
-                        _backupStyle = (WallpaperStyle)int.Parse(styleValue);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error backing up wallpaper state: {ex}");
-            }
-        }
-
-        private void ApplyWallpaper(string filePath, WallpaperStyle style)
-        {
-            try
-            {
-                // Set Registry values
-                using (var key = Registry.CurrentUser.OpenSubKey(
-                    @"Control Panel\Desktop", true))
-                {
-                    if (key != null)
-                    {
-                        key.SetValue("Wallpaper", filePath);
-                        key.SetValue("WallpaperStyle", ((int)style).ToString());
-                        key.SetValue("TileWallpaper", style == WallpaperStyle.Tile ? "1" : "0");
-                    }
-                }
-
-                // Apply wallpaper
-                SystemParametersInfo(
-                    SPI_SETDESKWALLPAPER, 0, filePath,
-                    SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error applying wallpaper: {ex}");
-                throw;
-            }
+            Logger.LogWarning("BackupState is deprecated. Use Wallpaper.BackupState() for backward compatibility.");
         }
     }
 }

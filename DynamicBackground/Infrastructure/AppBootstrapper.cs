@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using DynamicBackground.Services;
 using DynamicBackground.Services.Abstractions;
 using DynamicBackground.Services.Logging;
+using DynamicBackground.Services.Platform;
 using DynamicBackground.Platform.Windows;
 using DynamicBackground.ViewModels;
 
@@ -34,7 +35,8 @@ namespace DynamicBackground.Infrastructure
             services.AddSingleton<IImageDownloader, HttpImageDownloader>();
             services.AddSingleton<IBackgroundService, BackgroundService>();
 
-            // Register platform-specific services
+            // Register platform-specific services (Windows only for testing)
+            services.AddSingleton<IWallpaperProvider>(sp => new SimpleWallpaperProvider());
             services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
 
             // Register ViewModel
