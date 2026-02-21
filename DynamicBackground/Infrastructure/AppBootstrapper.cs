@@ -34,6 +34,7 @@ namespace DynamicBackground.Infrastructure
             services.AddSingleton<ISettingsService>(new SettingsService(settingsFilePath));
             services.AddSingleton<IImageDownloader, HttpImageDownloader>();
             services.AddSingleton<IBackgroundService, BackgroundService>();
+            services.AddSingleton<IStartupDelayManager, StartupDelayManager>();
 
             // Register platform-specific services (Windows only for testing)
             services.AddSingleton<IWallpaperProvider>(sp => new SimpleWallpaperProvider());

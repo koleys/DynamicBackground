@@ -2,7 +2,10 @@ using Newtonsoft.Json;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Threading;
 using DynamicBackground.Services.Abstractions;
+using DynamicBackground.Infrastructure;
+using DynamicBackground.Services;
 
 namespace DynamicBackground.Services
 {
@@ -17,21 +20,33 @@ namespace DynamicBackground.Services
         private dynamic? _jsonCache;
         private DateTime _jsonCacheTime = DateTime.MinValue;
         private const int CACHE_HOURS = 24;
+        private readonly IStartupDelayManager _delayManager;
 
         public BackgroundService(
             ISettingsService settingsService,
             IImageDownloader imageDownloader,
-            ILogger logger)
+            ILogger logger,
+            IStartupDelayManager delayManager)
         {
             _settingsService = settingsService;
             _imageDownloader = imageDownloader;
             _logger = logger;
+            _delayManager = delayManager;
         }
 
         public async Task<string> GetDownloadedImagePathAsync(CancellationToken cancellationToken = default)
         {
             try
             {
+                // Apply startup delay only during startup phase
+                await _delayManager.ApplyStartupDelayAsync();
+
+                // Mark startup complete after first successful operation
+                if (!_delayManager.IsStartupComplete)
+                {
+                    _delayManager.MarkStartupComplete();
+                }
+
                 var urlBase = await GetBackgroundUrlBaseAsync(cancellationToken);
                 var extension = GetResolutionExtension();
                 var fullUrl = urlBase + extension;

@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 using DynamicBackground.Services.Abstractions;
+using DynamicBackground.Infrastructure;
 
 namespace DynamicBackground.Services
 {
@@ -52,11 +53,28 @@ namespace DynamicBackground.Services
         public int GetSettingAsInt(string key, int defaultValue = 0)
         {
             var value = GetSetting(key);
-            return int.TryParse(value, out var result) ? result : defaultValue;
+            if (!int.TryParse(value, out var result))
+            {
+                return defaultValue;
+            }
+
+            // Validate against app constants
+            if (key == AppConstants.SETTINGS_KEY_STARTUP_DELAY)
+            {
+                result = Math.Max(AppConstants.MIN_STARTUP_DELAY_SECONDS, result);
+                result = Math.Min(AppConstants.MAX_STARTUP_DELAY_SECONDS, result);
+            }
+
+            return result;
         }
 
         public void SetSetting(string key, int value)
         {
+            if (key == AppConstants.SETTINGS_KEY_STARTUP_DELAY)
+            {
+                value = Math.Max(AppConstants.MIN_STARTUP_DELAY_SECONDS, value);
+                value = Math.Min(AppConstants.MAX_STARTUP_DELAY_SECONDS, value);
+            }
             SetSetting(key, value.ToString());
         }
 
@@ -104,9 +122,10 @@ namespace DynamicBackground.Services
                     var defaults = new Dictionary<string, string>
                     {
                         { "ImgSaveLoc", Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), 
+                            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
                             "Bing Backgrounds", DateTime.Now.Year.ToString()) },
-                        { "Interval", "720" }
+                        { "Interval", "720" },
+                        { AppConstants.SETTINGS_KEY_STARTUP_DELAY, AppConstants.DEFAULT_STARTUP_DELAY_SECONDS.ToString() }
                     };
                     SaveSettings(defaults);
                 }

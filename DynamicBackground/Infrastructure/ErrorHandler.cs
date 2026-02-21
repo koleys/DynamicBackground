@@ -10,14 +10,12 @@ namespace DynamicBackground.Infrastructure
     public static class ErrorHandler
     {
         /// <summary>
-        /// Handles and logs an error, optionally showing a user message.
+        /// Handles and logs an error silently.
         /// </summary>
         public static void HandleError(
             string message,
             Exception? exception,
-            ILogger logger,
-            bool showUserMessage = true,
-            string windowTitle = "Error")
+            ILogger logger)
         {
             if (exception != null)
             {
@@ -27,40 +25,20 @@ namespace DynamicBackground.Infrastructure
             {
                 logger.LogError(message);
             }
-
-            if (showUserMessage)
-            {
-                MessageBox.Show(
-                    message,
-                    windowTitle,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
         }
 
         /// <summary>
-        /// Handles a warning with optional user notification.
+        /// Handles a warning silently.
         /// </summary>
         public static void HandleWarning(
             string message,
-            ILogger logger,
-            bool showUserMessage = true,
-            string windowTitle = "Warning")
+            ILogger logger)
         {
             logger.LogWarning(message);
-
-            if (showUserMessage)
-            {
-                MessageBox.Show(
-                    message,
-                    windowTitle,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-            }
         }
 
         /// <summary>
-        /// Handles validation failure with user notification.
+        /// Handles validation failure silently.
         /// </summary>
         public static bool ValidateInput(
             string input,
@@ -69,20 +47,19 @@ namespace DynamicBackground.Infrastructure
         {
             if (string.IsNullOrWhiteSpace(input))
             {
-                HandleWarning(errorMessage, logger, true, "Validation");
+                HandleWarning(errorMessage, logger);
                 return false;
             }
             return true;
         }
 
         /// <summary>
-        /// Safely executes an operation with error handling.
+        /// Safely executes an operation with silent error handling.
         /// </summary>
         public static bool SafeExecute(
             Action operation,
             string operationName,
-            ILogger logger,
-            bool showUserMessage = true)
+            ILogger logger)
         {
             try
             {
@@ -94,21 +71,19 @@ namespace DynamicBackground.Infrastructure
                 HandleError(
                     $"Failed to {operationName}: {ex.Message}",
                     ex,
-                    logger,
-                    showUserMessage);
+                    logger);
                 return false;
             }
         }
 
         /// <summary>
-        /// Safely executes an operation with error handling and result.
+        /// Safely executes an operation with silent error handling and result.
         /// </summary>
         public static T? SafeExecute<T>(
             Func<T> operation,
             string operationName,
             ILogger logger,
-            T? defaultValue = default,
-            bool showUserMessage = false)
+            T? defaultValue = default)
             where T : class
         {
             try
@@ -120,8 +95,7 @@ namespace DynamicBackground.Infrastructure
                 HandleError(
                     $"Failed to {operationName}: {ex.Message}",
                     ex,
-                    logger,
-                    showUserMessage);
+                    logger);
                 return defaultValue;
             }
         }
