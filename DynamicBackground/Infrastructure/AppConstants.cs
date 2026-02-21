@@ -8,11 +8,15 @@ namespace DynamicBackground.Infrastructure
         // Settings Keys
         public const string SETTINGS_KEY_IMAGE_SAVE_LOCATION = "ImgSaveLoc";
         public const string SETTINGS_KEY_UPDATE_INTERVAL = "Interval";
+        public const string SETTINGS_KEY_STARTUP_DELAY = "StartupDelay";
 
         // Default Settings Values
         public const int DEFAULT_UPDATE_INTERVAL_MINUTES = 720; // 12 hours
-        public const int MIN_UPDATE_INTERVAL_MINUTES = 30;
-        public const int MAX_UPDATE_INTERVAL_MINUTES = 2880; // 48 hours
+        public const int DEFAULT_STARTUP_DELAY_SECONDS = 300; // 5 minutes
+
+        // Validation Ranges
+        public const int MIN_STARTUP_DELAY_SECONDS = 0;
+        public const int MAX_STARTUP_DELAY_SECONDS = 300; // 5 minutes
 
         // Bing Background URLs
         public const string BING_IMAGE_ARCHIVE_API_URL = "https://www.bing.com/HPImageArchive.aspx";

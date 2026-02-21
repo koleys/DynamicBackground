@@ -10,7 +10,7 @@ namespace DynamicBackground
         private const string LogName = "Application";
         private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DynamicBackground.log");
 
-        public static void LogError(string message, Exception ex = null)
+        public static void LogError(string message, Exception? ex = null)
         {
             string errorMessage = ex != null
                 ? $"{DateTime.Now:u} | [ERROR] {message}\nException: {ex}\n"

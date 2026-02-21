@@ -3,8 +3,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
+using DynamicBackground.Services;
 using DynamicBackground.Services.Abstractions;
 using DynamicBackground.ViewModels;
+using DynamicBackground.Infrastructure;
+using DynamicBackground.Services.Logging;
 
 namespace DynamicBackground
 {
@@ -14,7 +17,9 @@ namespace DynamicBackground
         private BingBackground bingobj;
         private readonly IServiceProvider _serviceProvider;
         private MainWindowViewModel? _viewModel;
-
+        private readonly ISettingsService _settingsService;
+        private readonly ILogger _logger;
+        
         public DynamicBackgroundUI(IServiceProvider serviceProvider = null)
         {
             InitializeComponent();
@@ -23,6 +28,9 @@ namespace DynamicBackground
 
             // Support both DI and legacy initialization
             _serviceProvider = serviceProvider;
+            _settingsService = new SettingsService("settings.json");
+            _logger = new DualModeLogger("DynamicBackground.log");
+
             if (_serviceProvider != null)
             {
                 // Initialize ViewModel from DI
@@ -32,10 +40,10 @@ namespace DynamicBackground
                 var imageDownloader = _serviceProvider.GetService(typeof(IImageDownloader)) as IImageDownloader;
                 var logger = _serviceProvider.GetService(typeof(ILogger)) as ILogger;
 
-                if (backgroundService != null && wallpaperService != null && 
+                if (backgroundService != null && wallpaperService != null &&
                     settingsService != null && imageDownloader != null && logger != null)
                 {
-                    _viewModel = new MainWindowViewModel(backgroundService, wallpaperService, 
+                    _viewModel = new MainWindowViewModel(backgroundService, wallpaperService,
                         settingsService, imageDownloader, logger);
                 }
             }
@@ -121,7 +129,6 @@ namespace DynamicBackground
             {
                 if (string.IsNullOrEmpty(Filepath.Text))
                 {
-                    MessageBox.Show("please select a file");
                     return;
                 }
                 
@@ -138,7 +145,7 @@ namespace DynamicBackground
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(ex.Message);
+                        _logger.LogError("Failed to set wallpaper from URL", ex);
                     }
                 }
                 else
@@ -154,7 +161,7 @@ namespace DynamicBackground
             SetBingBackground();
         }
 
-        private void SetBingBackground()
+        private async void SetBingBackground()
         {
             if (_viewModel != null)
             {
@@ -170,6 +177,15 @@ namespace DynamicBackground
             {
                 try
                 {
+                    // Get startup delay setting
+                    int startupDelay = _settingsService.GetSettingAsInt(AppConstants.SETTINGS_KEY_STARTUP_DELAY, AppConstants.DEFAULT_STARTUP_DELAY_SECONDS);
+
+                    // Apply startup delay if enabled
+                    if (startupDelay > 0)
+                    {
+                        await Task.Delay(startupDelay * 1000);
+                    }
+
                     string savedFilePath = bingobj.GetDownloadedImagePath();
                     if (!string.IsNullOrEmpty(savedFilePath))
                     {
@@ -179,7 +195,7 @@ namespace DynamicBackground
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    Logger.LogError("Failed to download and set Bing wallpaper", ex);
                 }
             }
         }
@@ -222,7 +238,7 @@ namespace DynamicBackground
             if(checkBox1.Checked)
             {
                 SetBingBackground();
-                int interval_val = Convert.ToInt32(bingobj.GetSetting("Interval"));
+                int interval_val = int.Parse(bingobj.GetSetting("Interval") ?? "720");
                 timer1.Interval = Convert.ToInt32(interval_val) * 60000;
                 timer1.Start();
             }
@@ -258,7 +274,7 @@ namespace DynamicBackground
             }
             else
             {
-                bingobj.SetSetting("Interval", interval.Value.ToString());
+                bingobj.SetSetting("Interval", ((int)interval.Value).ToString());
             }
         }
     }

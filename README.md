@@ -229,12 +229,14 @@ DynamicBackground is a **production-ready**, **cross-platform wallpaper manageme
   "autoUpdateEnabled": true,
   "autoUpdateIntervalMinutes": 1440,
   "downloadLocation": "C:\\Users\\Public\\Pictures\\Bing",
+  "startupDelaySeconds": 300,
   "lastDownloadedImagePath": "C:\\Users\\Public\\Pictures\\Bing\\2026-02-08_bing.jpg",
   "showNotifications": true,
   "startWithSystem": false,
   "useHttps": true,
   "imageQuality": 85,
   "maxCacheSizeMB": 500,
+  "startupDelaySeconds": 300,
   "wallpaperHistory": [
     "C:\\Users\\Public\\Pictures\\Bing\\2026-01-15_bing.jpg",
     "C:\\Users\\Public\\Pictures\\Bing\\2026-01-14_bing.jpg"
@@ -263,6 +265,10 @@ DynamicBackground is a **production-ready**, **cross-platform wallpaper manageme
 - **Audit Logging:** All configuration changes are logged
 - **Backup/Restore:** Settings can be backed up and restored
 - **Multi-User Support:** Separate settings for different user accounts
+
+### Startup Delay Feature
+
+- **startupDelaySeconds:** Delays the first Bing wallpaper operation by the specified number of seconds during application startup. Default is 300 seconds (5 minutes). This feature helps prevent system slowdowns during boot and only applies to the initial startup, not to manual wallpaper operations. The delay can be configured in the settings file and is useful for systems that need time to stabilize before network operations begin.
 
 ---
 
@@ -492,7 +498,7 @@ DynamicBackground/
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│      UI Layer (WinForms)        │  Form1, MainWindow                      │
+│      UI Layer (WinForms)        │  DynamicBackgroundUI, Form1                      │
 ├───────────────────────────────────────────────────────────────────┤
 │   ViewModel/Controller Layer    │  MainWindowViewModel, AppController       │
 ├───────────────────────────────────────────────────────────────────┤
@@ -503,6 +509,8 @@ DynamicBackground/
 │   Platform Abstraction Layer    │  IWallpaperProvider                     │
 ├───────────────────────────────────────────────────────────────────┤
 │  Platform-Specific Layer        │  Windows/macOS/Linux Providers           │
+├───────────────────────────────────────────────────────────────────┤
+│  Dependency Injection Layer     │  IServiceProvider, AppBootstrapper      │
 └───────────────────────────────────────────────────────────────────┘
 ```
 

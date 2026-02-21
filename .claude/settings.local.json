@@ -5,7 +5,31 @@
       "Bash(dotnet build)",
       "Bash(dotnet run --configuration Release)",
       "Bash(dir:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebSearch",
+      "Bash(dotnet run)",
+      "Bash(dotnet run:*)",
+      "Bash(dotnet build:*)",
+      "Bash(DynamicBackground.exe)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 25408 -Force\")",
+      "Bash(dotnet clean:*)",
+      "Bash(curl:*)",
+      "Bash(powershell \"Get-Process | Where-Object {$_ProcessName -like ''*DynamicBackground*''} | Select-Object ProcessName, Id | Format-Table -AutoSize\")",
+      "Bash(powershell \"Get-Process | Where-Object {$_ProcessName -like ''*DynamicBackground*''} | Select-Object ProcessName, Id\")",
+      "Bash(powershell \"Get-Process | Where-Object {$_ProcessName -like ''*Dynamic*'' -and $_ProcessName -like ''*Back*''} | Select-Object ProcessName, Id\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Select-Object FullName, LastWriteTime\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *DynamicBackground* -ErrorAction SilentlyContinue | Select-Object FullName, LastWriteTime\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Select-Object FullName, LastWriteTime | Where-Object {$_LastWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)}\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Select-Object FullName, LastWriteTime | Where-Object {$_LastWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)} | Format-Table -AutoSize\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object {$_LastWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)} | Select-Object FullName\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Where-Object {$_LastWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)} | Select-Object FullName\")",
+      "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Select-Object FullName, LastWriteTime | Where-Object {$_astWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)} | Format-Table -AutoSize\")",
+      "Bash(powershell \"Get-Process | Where-Object {$_rocessName -like ''*DynamicBackground*''} | Select-Object ProcessName, Id | Format-Table -AutoSize\")",
+      "Bash(find:*)"
     ]
   }
 }

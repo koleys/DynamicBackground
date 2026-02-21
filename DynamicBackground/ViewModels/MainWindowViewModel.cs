@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DynamicBackground.Services.Abstractions;
+using DynamicBackground.Services;
 
 namespace DynamicBackground.ViewModels
 {
@@ -19,13 +20,22 @@ namespace DynamicBackground.ViewModels
         private readonly ISettingsService _settingsService;
         private readonly IImageDownloader _imageDownloader;
         private readonly ILogger _logger;
+        private string _lastError;
+        public string LastError
+        {
+            get { return _lastError; }
+            private set
+            {
+                _lastError = value;
+                OnPropertyChanged(nameof(LastError));
+            }
+        }
 
         private string _currentImagePath = string.Empty;
         private WallpaperStyle _currentStyle = WallpaperStyle.Fill;
         private bool _autoUpdateEnabled = true;
         private int _updateInterval = 720;
         private bool _isProcessing = false;
-        private string _lastError = string.Empty;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -94,18 +104,6 @@ namespace DynamicBackground.ViewModels
             }
         }
 
-        public string LastError
-        {
-            get => _lastError;
-            private set
-            {
-                if (_lastError != value)
-                {
-                    _lastError = value;
-                    OnPropertyChanged(nameof(LastError));
-                }
-            }
-        }
 
         public MainWindowViewModel(
             IBackgroundService backgroundService,
@@ -130,14 +128,13 @@ namespace DynamicBackground.ViewModels
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                LastError = "Please select a file";
+                _logger.LogError("SetWallpaperAsync: Please select a file");
                 return false;
             }
 
             try
             {
                 IsProcessing = true;
-                LastError = string.Empty;
 
                 // Check if URL or local file
                 if (Uri.IsWellFormedUriString(filePath, UriKind.RelativeOrAbsolute))
@@ -163,7 +160,6 @@ namespace DynamicBackground.ViewModels
             }
             catch (Exception ex)
             {
-                LastError = $"Error: {ex.Message}";
                 _logger.LogError($"Failed to set wallpaper from {filePath}", ex);
                 return false;
             }
@@ -181,7 +177,6 @@ namespace DynamicBackground.ViewModels
             try
             {
                 IsProcessing = true;
-                LastError = string.Empty;
 
                 var imagePath = await _backgroundService.GetDownloadedImagePathAsync(cancellationToken);
                 if (!string.IsNullOrEmpty(imagePath))
@@ -194,7 +189,6 @@ namespace DynamicBackground.ViewModels
             }
             catch (Exception ex)
             {
-                LastError = $"Error downloading Bing wallpaper: {ex.Message}";
                 _logger.LogError("Failed to download and set Bing wallpaper", ex);
                 return false;
             }
@@ -250,12 +244,10 @@ namespace DynamicBackground.ViewModels
             try
             {
                 _settingsService.SetSetting("ImgSaveLoc", folderPath);
-                LastError = string.Empty;
                 return true;
             }
             catch (Exception ex)
             {
-                LastError = "Failed to save location setting";
                 _logger.LogError("Failed to set image save location", ex);
                 return false;
             }
@@ -268,7 +260,7 @@ namespace DynamicBackground.ViewModels
         {
             if (minutes <= 0)
             {
-                LastError = "Interval must be greater than 0";
+                _logger.LogError("SetUpdateInterval: Interval must be greater than 0");
                 return false;
             }
 
@@ -276,12 +268,10 @@ namespace DynamicBackground.ViewModels
             {
                 UpdateInterval = minutes;
                 _settingsService.SetSetting("Interval", minutes.ToString());
-                LastError = string.Empty;
                 return true;
             }
             catch (Exception ex)
             {
-                LastError = "Failed to save interval setting";
                 _logger.LogError("Failed to set update interval", ex);
                 return false;
             }

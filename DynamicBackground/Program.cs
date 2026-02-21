@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using DynamicBackground.Infrastructure;
+using DynamicBackground.Services.Abstractions;
 
 namespace DynamicBackground
 {
@@ -25,8 +26,7 @@ namespace DynamicBackground
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Application initialization failed: {ex.Message}", 
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.LogError("Application initialization failed", ex);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
 using System.Drawing;
@@ -23,6 +23,21 @@ namespace DynamicBackground
         public BingBackground()
         {
             EnsureSettingsFile();
+        }
+
+        public void SetSetting(string key, string value)
+        {
+            try
+            {
+                var settings = LoadSettings();
+                settings[key] = value;
+                SaveSettings(settings);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error setting {key}: {ex}");
+                throw;
+            }
         }
 
         private void EnsureSettingsFile()
@@ -112,11 +127,16 @@ namespace DynamicBackground
             var resolution = Screen.PrimaryScreen.Bounds;
             string widthByHeight = $"{resolution.Width}x{resolution.Height}";
             string potentialExtension = $"_{widthByHeight}.jpg";
-            if (WebsiteExists(url + potentialExtension))
+
+            // Try with the required parameters first
+            string urlWithParams = potentialExtension + "&rf=LaDigue_" + potentialExtension.Substring(1) + "&pid=hp";
+            if (WebsiteExists(url + urlWithParams))
             {
-                return potentialExtension;
+                return urlWithParams;
             }
-            return "_1920x1080.jpg";
+
+            // Fallback to 1920x1080 with parameters
+            return "_1920x1080.jpg&rf=LaDigue_1920x1080.jpg&pid=hp";
         }
 
         private Image DownloadBackground(string url)
@@ -203,22 +223,64 @@ namespace DynamicBackground
             }
         }
 
-        public void SetSetting(string key, string value)
+        private Dictionary<string, string> LoadSettings()
         {
             try
             {
-                Dictionary<string, string> dict = new();
-                if (File.Exists(SettingsFilePath))
+                if (!File.Exists(SettingsFilePath))
+                    return new Dictionary<string, string>(DefaultSettings);
+
+                var json = File.ReadAllText(SettingsFilePath);
+                var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                if (dict == null)
+                    return new Dictionary<string, string>(DefaultSettings);
+
+                // Merge with default settings
+                foreach (var kvp in DefaultSettings)
                 {
-                    var json = File.ReadAllText(SettingsFilePath);
-                    dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                    if (!dict.ContainsKey(kvp.Key))
+                        dict[kvp.Key] = kvp.Value;
                 }
-                dict[key] = value;
-                File.WriteAllText(SettingsFilePath, JsonConvert.SerializeObject(dict, Formatting.Indented));
+
+                return dict;
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Failed to set setting: {key}", ex);
+                Logger.LogError("Failed to load settings.", ex);
+                throw;
+            }
+        }
+
+        private void SaveSettings(Dictionary<string, string> settings)
+        {
+            try
+            {
+                var json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+                File.WriteAllText(SettingsFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to save settings.", ex);
+                throw;
+            }
+        }
+
+        public int GetSettingAsSeconds(string key)
+        {
+            try
+            {
+                var value = GetSetting(key);
+                if (string.IsNullOrEmpty(value))
+                    return 0;
+
+                if (int.TryParse(value, out int seconds))
+                    return seconds;
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to get setting as seconds: {key}", ex);
                 throw;
             }
         }
