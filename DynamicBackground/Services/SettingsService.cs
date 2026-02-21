@@ -125,7 +125,8 @@ namespace DynamicBackground.Services
                             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
                             "Bing Backgrounds", DateTime.Now.Year.ToString()) },
                         { "Interval", "720" },
-                        { AppConstants.SETTINGS_KEY_STARTUP_DELAY, AppConstants.DEFAULT_STARTUP_DELAY_SECONDS.ToString() }
+                        { AppConstants.SETTINGS_KEY_STARTUP_DELAY, AppConstants.DEFAULT_STARTUP_DELAY_SECONDS.ToString() },
+                        { AppConstants.SETTINGS_KEY_LOG_FILE_LOCATION, AppDomain.CurrentDomain.BaseDirectory }
                     };
                     SaveSettings(defaults);
                 }
