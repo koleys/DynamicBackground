@@ -7,6 +7,7 @@ namespace DynamicBackground.Infrastructure
     {
         // Settings Keys
         public const string SETTINGS_KEY_IMAGE_SAVE_LOCATION = "ImgSaveLoc";
+        public const string SETTINGS_KEY_LOG_FILE_LOCATION = "LogLoc";
         public const string SETTINGS_KEY_UPDATE_INTERVAL = "Interval";
         public const string SETTINGS_KEY_STARTUP_DELAY = "StartupDelay";
 

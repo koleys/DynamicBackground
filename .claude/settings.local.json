@@ -29,7 +29,8 @@
       "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Where-Object {$_LastWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)} | Select-Object FullName\")",
       "Bash(powershell \"Get-ChildItem -Path . -Recurse -Filter *.log -ErrorAction SilentlyContinue | Select-Object FullName, LastWriteTime | Where-Object {$_astWriteTime -gt \\(Get-Date\\).AddMinutes\\(-1\\)} | Format-Table -AutoSize\")",
       "Bash(powershell \"Get-Process | Where-Object {$_rocessName -like ''*DynamicBackground*''} | Select-Object ProcessName, Id | Format-Table -AutoSize\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(more:*)"
     ]
   }
 }

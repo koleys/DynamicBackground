@@ -23,11 +23,15 @@ namespace DynamicBackground.Infrastructure
                 AppConstants.APP_FOLDER_NAME,
                 AppConstants.SETTINGS_FILE_NAME);
 
-            // Register logging service
-            var logFilePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                AppConstants.APP_FOLDER_NAME,
-                AppConstants.LOG_FILE_NAME);
+            // Register log file manager
+            services.AddSingleton<ILogFileManager, LogFileManager>();
+
+            // Register logging service with configurable log file location
+            var logFileManager = new LogFileManager(new SettingsService(
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    AppConstants.APP_FOLDER_NAME,
+                    AppConstants.SETTINGS_FILE_NAME)));
+            var logFilePath = logFileManager.GetLogFilePath();
             services.AddSingleton<ILogger>(new DualModeLogger(logFilePath));
 
             // Register core services

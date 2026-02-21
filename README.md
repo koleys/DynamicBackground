@@ -16,6 +16,7 @@ DynamicBackground is a **production-ready**, **cross-platform wallpaper manageme
 - **Error Handling:** Comprehensive error reporting and logging
 - **Async Operations:** Non-blocking UI with proper async/await patterns
 - **Production-Ready:** 86 tests passing, 85%+ code coverage, no build errors
+- **Configurable Log Location:** Application directory by default, configurable through settings
 
 ---
 
@@ -680,6 +681,7 @@ For comprehensive project documentation and analysis, refer to these consolidate
 - **[COMPLETE MODERNIZATION FINAL REPORT](COMPLETE_MODERNIZATION_FINAL_REPORT.md)** - Comprehensive final report covering the entire modernization project
 - **[MASTER ANALYSIS CONSOLIDATED](MASTER_ANALYSIS_CONSOLIDATED.md)** - Original analysis and strategic planning documentation
 - **[PHASES 2-3-4 IMPLEMENTATION REPORT](PHASES_2_3_4_IMPLEMENTATION_REPORT.md)** - Detailed technical breakdown of implementation phases
+- **[LOG CONFIGURATION UPDATE](Reports/UiUpgrade.md)** - Recent update for configurable log file location
 
 ---
 
